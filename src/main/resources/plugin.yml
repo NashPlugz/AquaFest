@@ -1,0 +1,12 @@
+name: AquaFest
+version: 1.0
+main: me.nashplugz.aquaf.AquaFest
+api-version: 1.13
+depend: [Vault]
+commands:
+  aquafest:
+    description: Main command for AquaFest
+    usage: /<command> [help|start|stop] [eventname] [worldwide]
+  aquasell:
+    description: Sell caught fish
+    usage: /<command>

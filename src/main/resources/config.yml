@@ -1,0 +1,17 @@
+fish:
+  cod:
+    min_value: 5.0
+    max_value: 15.0
+    material: COD
+  salmon:
+    min_value: 10.0
+    max_value: 20.0
+    material: SALMON
+  tropical_fish:
+    min_value: 15.0
+    max_value: 25.0
+    material: TROPICAL_FISH
+  pufferfish:
+    min_value: 20.0
+    max_value: 30.0
+    material: PUFFERFISH
