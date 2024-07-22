@@ -1,43 +1,113 @@
-# Fish exhaustion settings
-fish_exhaustion_radius: 5.0
-fish_exhaustion_cooldown: 5m  # Use 's' for seconds or 'm' for minutes
-
-# Default config options
-fish_shortage_time: 300
-fish_shortage_distance: 10.0
-
-# Default world event
-events:
-  default:
-    name: "DefaultEvent"
-    duration: 3600
-    fish_shortage_time: 300
-    fish_shortage_distance: 10
-
-  # Worldwide event
-  worldwide:
-    name: "WorldwideEvent"
-    duration: 7200
-    fish_shortage_time: 600
-    fish_shortage_distance: 20
-
-# Fish types and their properties
 fish:
   cod:
-    min_value: 5.0
-    max_value: 15.0
+    name: "Cod"
     material: COD
+    common:
+      name: "Common Cod"
+      min_value: 5.0
+      max_value: 15.0
+      chance: 50.0
+    uncommon:
+      name: "Uncommon Cod"
+      min_value: 10.0
+      max_value: 25.0
+      chance: 25.0
+    rare:
+      name: "Rare Cod"
+      min_value: 20.0
+      max_value: 40.0
+      chance: 15.0
+    epic:
+      name: "Epic Cod"
+      min_value: 35.0
+      max_value: 60.0
+      chance: 8.0
+    legendary:
+      name: "Legendary Cod"
+      min_value: 50.0
+      max_value: 100.0
+      chance: 2.0
   salmon:
-    min_value: 10.0
-    max_value: 20.0
+    name: "Salmon"
     material: SALMON
+    common:
+      name: "Common Salmon"
+      min_value: 8.0
+      max_value: 20.0
+      chance: 45.0
+    uncommon:
+      name: "Uncommon Salmon"
+      min_value: 15.0
+      max_value: 30.0
+      chance: 25.0
+    rare:
+      name: "Rare Salmon"
+      min_value: 25.0
+      max_value: 45.0
+      chance: 18.0
+    epic:
+      name: "Epic Salmon"
+      min_value: 40.0
+      max_value: 70.0
+      chance: 10.0
+    legendary:
+      name: "Legendary Salmon"
+      min_value: 60.0
+      max_value: 120.0
+      chance: 2.0
   tropical_fish:
-    min_value: 15.0
-    max_value: 25.0
+    name: "Tropical Fish"
     material: TROPICAL_FISH
+    common:
+      name: "Common Tropical Fish"
+      min_value: 10.0
+      max_value: 25.0
+      chance: 40.0
+    uncommon:
+      name: "Uncommon Tropical Fish"
+      min_value: 20.0
+      max_value: 35.0
+      chance: 30.0
+    rare:
+      name: "Rare Tropical Fish"
+      min_value: 30.0
+      max_value: 50.0
+      chance: 20.0
+    epic:
+      name: "Epic Tropical Fish"
+      min_value: 45.0
+      max_value: 80.0
+      chance: 8.0
+    legendary:
+      name: "Legendary Tropical Fish"
+      min_value: 70.0
+      max_value: 140.0
+      chance: 2.0
   pufferfish:
-    min_value: 20.0
-    max_value: 30.0
+    name: "Pufferfish"
     material: PUFFERFISH
-
-# Add any other configuration options here
+    common:
+      name: "Common Pufferfish"
+      min_value: 15.0
+      max_value: 30.0
+      chance: 35.0
+    uncommon:
+      name: "Uncommon Pufferfish"
+      min_value: 25.0
+      max_value: 40.0
+      chance: 30.0
+    rare:
+      name: "Rare Pufferfish"
+      min_value: 35.0
+      max_value: 55.0
+      chance: 22.0
+    epic:
+      name: "Epic Pufferfish"
+      min_value: 50.0
+      max_value: 90.0
+      chance: 10.0
+    legendary:
+      name: "Legendary Pufferfish"
+      min_value: 80.0
+      max_value: 160.0
+      chance: 3.0

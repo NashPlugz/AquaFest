@@ -27,7 +27,7 @@ public class FishingListener implements Listener {
 
         if (event.getState() == PlayerFishEvent.State.FISHING) {
             // Player is casting their line
-            if (!plugin.getFishingCooldownManager().canFish(fishingLocation)) {
+            if (plugin.getFishingCooldownManager().isExhausted(fishingLocation)) {
                 event.setCancelled(true);
                 if (plugin.getFishingCooldownManager().canSendMessage(player)) {
                     double distance = plugin.getFishingCooldownManager().getExhaustionRadius();
@@ -45,9 +45,9 @@ public class FishingListener implements Listener {
 
                 ItemStack fishItem = new ItemStack(caughtFish.getMaterial());
                 ItemMeta meta = fishItem.getItemMeta();
-                meta.setDisplayName(getTierColor(caughtFish.getTier()) + caughtFish.getName());
+                meta.setDisplayName(getTierColor(caughtFish.getTier()) + "(" + caughtFish.getTier().name() + ") " + caughtFish.getName());
                 meta.setLore(Arrays.asList(
-                        ChatColor.YELLOW + "Value: $" + String.format("%.2f", caughtFish.getValue()),
+                        ChatColor.YELLOW + "Value: " + ChatColor.GOLD + "$" + String.format("%.2f", caughtFish.getValue()),
                         ChatColor.GRAY + "Tier: " + getTierColor(caughtFish.getTier()) + caughtFish.getTier().name()
                 ));
                 fishItem.setItemMeta(meta);
@@ -56,15 +56,19 @@ public class FishingListener implements Listener {
                 player.getInventory().addItem(fishItem);
 
                 if (plugin.getEventManager().isWorldwideEventActive()) {
-                    plugin.getLeaderboardManager().addScore(player, (int) caughtFish.getValue(), "worldwide");
+                    plugin.getLeaderboardManager().addScore(player, caughtFish.getValue(), "worldwide");
                     plugin.getScoreboardManager().updateGlobalScoreboard();
                 } else {
-                    plugin.getLeaderboardManager().addScore(player, (int) caughtFish.getValue(), worldName);
+                    plugin.getLeaderboardManager().addScore(player, caughtFish.getValue(), worldName);
                     plugin.getScoreboardManager().updateScoreboard(worldName);
                 }
 
-                player.sendMessage(ChatColor.GREEN + "You caught a " + getTierColor(caughtFish.getTier()) + caughtFish.getName() +
-                        ChatColor.GREEN + " worth $" + String.format("%.2f", caughtFish.getValue()) + "!");
+                player.sendMessage(ChatColor.GREEN + "You caught a " +
+                        getTierColor(caughtFish.getTier()) + "(" + caughtFish.getTier().name() + ") " + caughtFish.getName() +
+                        ChatColor.GREEN + " worth " + ChatColor.GOLD + "$" + String.format("%.2f", caughtFish.getValue()) + ChatColor.GREEN + "!");
+
+                // Set the area as exhausted after catching a fish
+                plugin.getFishingCooldownManager().setExhausted(fishingLocation);
             }
         }
     }

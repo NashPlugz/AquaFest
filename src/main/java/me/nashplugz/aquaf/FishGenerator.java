@@ -1,47 +1,78 @@
 package me.nashplugz.aquaf;
 
 import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class FishGenerator {
-    private Map<String, Fish> fishTypes;
-    private Random random;
+    private final List<Fish> fishList;
+    private final Random random;
 
     public FishGenerator(FileConfiguration config) {
-        fishTypes = new HashMap<>();
-        random = new Random();
-        loadFishTypes(config);
+        this.fishList = new ArrayList<>();
+        this.random = new Random();
+        loadFishFromConfig(config);
     }
 
-    private void loadFishTypes(FileConfiguration config) {
-        for (String fishName : config.getConfigurationSection("fish").getKeys(false)) {
-            double minValue = config.getDouble("fish." + fishName + ".min_value");
-            double maxValue = config.getDouble("fish." + fishName + ".max_value");
-            String materialName = config.getString("fish." + fishName + ".material", "COD");
-            String tierName = config.getString("fish." + fishName + ".tier", "COMMON");
-            Material material = Material.valueOf(materialName.toUpperCase());
-            Fish.Tier tier = Fish.Tier.valueOf(tierName.toUpperCase());
-            fishTypes.put(fishName, new Fish(fishName, minValue, maxValue, material, tier));
+    private void loadFishFromConfig(FileConfiguration config) {
+        ConfigurationSection fishSection = config.getConfigurationSection("fish");
+        if (fishSection != null) {
+            for (String fishType : fishSection.getKeys(false)) {
+                ConfigurationSection fishTypeConfig = fishSection.getConfigurationSection(fishType);
+                if (fishTypeConfig != null) {
+                    String baseName = fishTypeConfig.getString("name", fishType);
+                    Material material = Material.valueOf(fishTypeConfig.getString("material", "COD"));
+
+                    for (Fish.Tier tier : Fish.Tier.values()) {
+                        String tierName = tier.name().toLowerCase();
+                        ConfigurationSection tierConfig = fishTypeConfig.getConfigurationSection(tierName);
+                        if (tierConfig != null) {
+                            String name = tierConfig.getString("name", baseName + " (" + tier.name() + ")");
+                            double minValue = tierConfig.getDouble("min_value", 1.0);
+                            double maxValue = tierConfig.getDouble("max_value", 10.0);
+                            double chance = tierConfig.getDouble("chance", 1.0);
+
+                            Fish fish = new Fish(name, minValue, maxValue, material, tier);
+                            for (int i = 0; i < chance * 100; i++) {
+                                fishList.add(fish);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
     public Fish generateRandomFish() {
-        String[] fishNames = fishTypes.keySet().toArray(new String[0]);
-        String randomFishName = fishNames[random.nextInt(fishNames.length)];
-        Fish fish = fishTypes.get(randomFishName);
-        fish.regenerateValue(); // Generate a new random value for this catch
-        return fish;
+        if (fishList.isEmpty()) {
+            return new Fish("Common Fish", 1.0, 5.0, Material.COD, Fish.Tier.COMMON);
+        }
+        return fishList.get(random.nextInt(fishList.size()));
     }
 
     public Fish getFishByName(String name) {
-        Fish fish = fishTypes.get(name);
-        if (fish != null) {
-            fish.regenerateValue(); // Generate a new random value when retrieved
+        for (Fish fish : fishList) {
+            if (fish.getName().equalsIgnoreCase(name)) {
+                return fish;
+            }
         }
-        return fish;
+        return null;
+    }
+
+    public Fish getFishByNameAndTier(String name, Fish.Tier tier) {
+        for (Fish fish : fishList) {
+            if (fish.getName().equalsIgnoreCase(name) && fish.getTier() == tier) {
+                return fish;
+            }
+        }
+        return null;
+    }
+
+    public List<Fish> getAllFish() {
+        return new ArrayList<>(fishList);
     }
 }

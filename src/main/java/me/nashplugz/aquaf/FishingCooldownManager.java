@@ -22,16 +22,15 @@ public class FishingCooldownManager {
         this.messageCooldown = messageCooldown;
     }
 
-    public boolean canFish(Location location) {
+    public boolean isExhausted(Location location) {
         String key = getLocationKey(location);
-        long currentTime = System.currentTimeMillis();
         Long lastFishingTime = lastFishingTimes.get(key);
+        return lastFishingTime != null && System.currentTimeMillis() - lastFishingTime <= cooldownTime;
+    }
 
-        if (lastFishingTime == null || currentTime - lastFishingTime > cooldownTime) {
-            lastFishingTimes.put(key, currentTime);
-            return true;
-        }
-        return false;
+    public void setExhausted(Location location) {
+        String key = getLocationKey(location);
+        lastFishingTimes.put(key, System.currentTimeMillis());
     }
 
     public boolean canSendMessage(Player player) {
