@@ -1,180 +1,132 @@
 package me.nashplugz.aquaf.events;
 
 import me.nashplugz.aquaf.AquaFest;
-import me.nashplugz.aquaf.EventConfig;
-import me.nashplugz.aquaf.Fish;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 public class FishingEventManager {
     private AquaFest plugin;
-    private Map<String, ActiveEvent> activeEvents;
-    private ActiveEvent worldwideEvent;
+    private Map<String, String> activeWorldEvents;
+    private String activeWorldwideEvent;
+    private Map<String, Long> eventEndTimes;
+    private Map<String, BukkitTask> eventTasks;
 
     public FishingEventManager(AquaFest plugin) {
         this.plugin = plugin;
-        this.activeEvents = new HashMap<>();
+        this.activeWorldEvents = new HashMap<>();
+        this.eventEndTimes = new HashMap<>();
+        this.eventTasks = new HashMap<>();
     }
 
     public boolean startEvent(String eventName, World world) {
-        if (worldwideEvent != null) {
+        if (isEventActive(world)) {
             return false;
         }
-        if (activeEvents.containsKey(world.getName())) {
+        String worldName = world.getName();
+        activeWorldEvents.put(worldName, eventName);
+        long duration = plugin.getConfigManager().getWorldEvent(worldName).getDuration();
+        long endTime = System.currentTimeMillis() + (duration * 1000);
+        eventEndTimes.put(worldName, endTime);
+
+        plugin.getEventBossBarManager().createWorldBossBar(worldName, eventName, duration);
+        plugin.getScoreboardManager().updateScoreboard(worldName);
+
+        BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            long remainingTime = (eventEndTimes.get(worldName) - System.currentTimeMillis()) / 1000;
+            if (remainingTime <= 0) {
+                stopEvent(eventName, world);
+            } else {
+                plugin.getEventBossBarManager().updateBossBar(worldName, remainingTime);
+            }
+        }, 20L, 20L); // Update every second
+
+        eventTasks.put(worldName, task);
+        return true;
+    }
+
+    public boolean stopEvent(String eventName, World world) {
+        String worldName = world.getName();
+        if (!isEventActive(world) || !activeWorldEvents.get(worldName).equals(eventName)) {
             return false;
         }
-        EventConfig config = plugin.getConfigManager().getWorldEvent(world.getName());
-        if (config == null) {
-            plugin.getLogger().warning("No event configuration found for world: " + world.getName());
-            return false;
+        activeWorldEvents.remove(worldName);
+        eventEndTimes.remove(worldName);
+        BukkitTask task = eventTasks.remove(worldName);
+        if (task != null) {
+            task.cancel();
         }
-        ActiveEvent event = new ActiveEvent(eventName, config, world);
-        activeEvents.put(world.getName(), event);
-        plugin.getEventBossBarManager().createWorldBossBar(world.getName(), eventName, config.getDuration());
-        startEventTimer(event);
+        plugin.getEventBossBarManager().removeWorldBossBar(worldName);
+        for (Player player : world.getPlayers()) {
+            plugin.getScoreboardManager().removePlayerScoreboard(player);
+        }
         return true;
     }
 
     public boolean startWorldwideEvent(String eventName) {
-        if (worldwideEvent != null || !activeEvents.isEmpty()) {
+        if (isWorldwideEventActive()) {
             return false;
         }
-        EventConfig config = plugin.getConfigManager().getWorldwideEvent();
-        if (config == null) {
-            plugin.getLogger().warning("No configuration found for worldwide event");
-            return false;
-        }
-        worldwideEvent = new ActiveEvent(eventName, config, null);
-        plugin.getEventBossBarManager().createWorldwideBossBar(eventName, config.getDuration());
-        startEventTimer(worldwideEvent);
-        return true;
-    }
+        activeWorldwideEvent = eventName;
+        long duration = plugin.getConfigManager().getWorldwideEvent().getDuration();
+        long endTime = System.currentTimeMillis() + (duration * 1000);
+        eventEndTimes.put("worldwide", endTime);
 
-    private void startEventTimer(ActiveEvent event) {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (event.update()) {
-                    this.cancel();
-                }
-            }
-        }.runTaskTimer(plugin, 0L, 20L); // Update every second
-    }
+        plugin.getEventBossBarManager().createWorldwideBossBar(eventName, duration);
+        plugin.getScoreboardManager().updateGlobalScoreboard();
 
-    public boolean stopEvent(String eventName, World world) {
-        ActiveEvent event = activeEvents.remove(world.getName());
-        if (event != null && event.getName().equals(eventName)) {
-            plugin.getEventBossBarManager().removeWorldBossBar(world.getName());
-            // Handle event end (e.g., announce winners)
-            return true;
-        }
-        return false;
-    }
-
-    public boolean stopWorldwideEvent(String eventName) {
-        if (worldwideEvent != null && worldwideEvent.getName().equals(eventName)) {
-            plugin.getEventBossBarManager().removeWorldwideBossBar();
-            worldwideEvent = null;
-            // Handle worldwide event end (e.g., announce global winners)
-            return true;
-        }
-        return false;
-    }
-
-    public boolean isEventActive(World world) {
-        return worldwideEvent != null || activeEvents.containsKey(world.getName());
-    }
-
-    public void recordCatch(Player player, Fish fish) {
-        World world = player.getWorld();
-        ActiveEvent event = worldwideEvent != null ? worldwideEvent : activeEvents.get(world.getName());
-        if (event != null) {
-            event.recordCatch(player, fish);
-        }
-    }
-
-    public String getEventName(String worldName) {
-        ActiveEvent event = activeEvents.get(worldName);
-        return event != null ? event.getName() : null;
-    }
-
-    public String getWorldwideEventName() {
-        return worldwideEvent != null ? worldwideEvent.getName() : null;
-    }
-
-    private class ActiveEvent {
-        private String name;
-        private EventConfig config;
-        private World world;
-        private Map<UUID, PlayerEventData> playerData;
-        private long startTime;
-        private long endTime;
-        private long remainingTime;
-
-        public ActiveEvent(String name, EventConfig config, World world) {
-            this.name = name;
-            this.config = config;
-            this.world = world;
-            this.playerData = new HashMap<>();
-            this.startTime = System.currentTimeMillis();
-            this.endTime = startTime + (config.getDuration() * 1000);
-            this.remainingTime = config.getDuration();
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public boolean update() {
-            remainingTime = Math.max(0, (endTime - System.currentTimeMillis()) / 1000);
-            if (world != null) {
-                plugin.getEventBossBarManager().updateBossBar(world.getName(), remainingTime);
+        BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            long remainingTime = (eventEndTimes.get("worldwide") - System.currentTimeMillis()) / 1000;
+            if (remainingTime <= 0) {
+                stopWorldwideEvent(eventName);
             } else {
                 plugin.getEventBossBarManager().updateWorldwideBossBar(remainingTime);
             }
+        }, 20L, 20L); // Update every second
 
-            plugin.getScoreboardManager().updateScoreboard();
-
-            if (remainingTime <= 0) {
-                if (world != null) {
-                    stopEvent(name, world);
-                } else {
-                    stopWorldwideEvent(name);
-                }
-                return true; // Event has ended
-            }
-            return false; // Event is still ongoing
-        }
-
-        public void recordCatch(Player player, Fish fish) {
-            UUID playerId = player.getUniqueId();
-            PlayerEventData data = playerData.computeIfAbsent(playerId, k -> new PlayerEventData());
-            data.addFish(fish);
-
-            // Update leaderboard
-            plugin.getLeaderboardManager().addScore(player, (int) fish.getValue(), world == null ? "worldwide" : world.getName());
-        }
+        eventTasks.put("worldwide", task);
+        return true;
     }
 
-    private class PlayerEventData {
-        private Map<String, Integer> fishCaught;
-
-        public PlayerEventData() {
-            fishCaught = new HashMap<>();
+    public boolean stopWorldwideEvent(String eventName) {
+        if (!isWorldwideEventActive() || !activeWorldwideEvent.equals(eventName)) {
+            return false;
         }
-
-        public void addFish(Fish fish) {
-            fishCaught.put(fish.getName(), fishCaught.getOrDefault(fish.getName(), 0) + 1);
+        activeWorldwideEvent = null;
+        eventEndTimes.remove("worldwide");
+        BukkitTask task = eventTasks.remove("worldwide");
+        if (task != null) {
+            task.cancel();
         }
-
-        public Map<String, Integer> getFishCaught() {
-            return fishCaught;
+        plugin.getEventBossBarManager().removeWorldwideBossBar();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            plugin.getScoreboardManager().removePlayerScoreboard(player);
         }
+        return true;
+    }
+
+    public boolean isEventActive(World world) {
+        return activeWorldEvents.containsKey(world.getName());
+    }
+
+    public boolean isWorldwideEventActive() {
+        return activeWorldwideEvent != null;
+    }
+
+    public String getEventName(String worldName) {
+        return activeWorldEvents.get(worldName);
+    }
+
+    public String getWorldwideEventName() {
+        return activeWorldwideEvent;
+    }
+
+    public long getRemainingTime(String worldName) {
+        Long endTime = eventEndTimes.get(worldName);
+        return endTime != null ? Math.max(0, (endTime - System.currentTimeMillis()) / 1000) : 0;
     }
 }

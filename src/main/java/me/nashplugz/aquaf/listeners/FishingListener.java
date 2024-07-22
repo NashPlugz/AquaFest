@@ -3,6 +3,7 @@ package me.nashplugz.aquaf.listeners;
 import me.nashplugz.aquaf.AquaFest;
 import me.nashplugz.aquaf.Fish;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -21,27 +22,50 @@ public class FishingListener implements Listener {
 
     @EventHandler
     public void onPlayerFish(PlayerFishEvent event) {
-        if (event.getState() == PlayerFishEvent.State.CAUGHT_FISH && plugin.getEventManager().isEventActive(event.getPlayer().getWorld())) {
-            Player player = event.getPlayer();
-            Fish caughtFish = plugin.getFishGenerator().generateRandomFish();
+        Player player = event.getPlayer();
+        Location fishingLocation = event.getHook().getLocation();
 
-            ItemStack fishItem = new ItemStack(caughtFish.getMaterial());
-            ItemMeta meta = fishItem.getItemMeta();
-            meta.setDisplayName(getTierColor(caughtFish.getTier()) + caughtFish.getName());
-            meta.setLore(Arrays.asList(
-                    ChatColor.YELLOW + "Value: $" + String.format("%.2f", caughtFish.getValue()),
-                    ChatColor.GRAY + "Tier: " + getTierColor(caughtFish.getTier()) + caughtFish.getTier().name()
-            ));
-            fishItem.setItemMeta(meta);
+        if (event.getState() == PlayerFishEvent.State.FISHING) {
+            // Player is casting their line
+            if (!plugin.getFishingCooldownManager().canFish(fishingLocation)) {
+                event.setCancelled(true);
+                if (plugin.getFishingCooldownManager().canSendMessage(player)) {
+                    double distance = plugin.getFishingCooldownManager().getExhaustionRadius();
+                    player.sendMessage(ChatColor.RED + "The fish in this area are exhausted. " +
+                            ChatColor.YELLOW + "Move at least " + String.format("%.1f", distance) + " blocks away to find more fish!");
+                }
+                return;
+            }
+        } else if (event.getState() == PlayerFishEvent.State.CAUGHT_FISH) {
+            // Player has caught a fish
+            String worldName = player.getWorld().getName();
 
-            event.getCaught().remove();
-            player.getInventory().addItem(fishItem);
+            if (plugin.getEventManager().isEventActive(player.getWorld()) || plugin.getEventManager().isWorldwideEventActive()) {
+                Fish caughtFish = plugin.getFishGenerator().generateRandomFish();
 
-            plugin.getEventManager().recordCatch(player, caughtFish);
-            player.sendMessage(ChatColor.GREEN + "You caught a " + getTierColor(caughtFish.getTier()) + caughtFish.getName() +
-                    ChatColor.GREEN + " worth $" + String.format("%.2f", caughtFish.getValue()) + "!");
+                ItemStack fishItem = new ItemStack(caughtFish.getMaterial());
+                ItemMeta meta = fishItem.getItemMeta();
+                meta.setDisplayName(getTierColor(caughtFish.getTier()) + caughtFish.getName());
+                meta.setLore(Arrays.asList(
+                        ChatColor.YELLOW + "Value: $" + String.format("%.2f", caughtFish.getValue()),
+                        ChatColor.GRAY + "Tier: " + getTierColor(caughtFish.getTier()) + caughtFish.getTier().name()
+                ));
+                fishItem.setItemMeta(meta);
 
-            plugin.getScoreboardManager().updateScoreboard();
+                event.getCaught().remove();
+                player.getInventory().addItem(fishItem);
+
+                if (plugin.getEventManager().isWorldwideEventActive()) {
+                    plugin.getLeaderboardManager().addScore(player, (int) caughtFish.getValue(), "worldwide");
+                    plugin.getScoreboardManager().updateGlobalScoreboard();
+                } else {
+                    plugin.getLeaderboardManager().addScore(player, (int) caughtFish.getValue(), worldName);
+                    plugin.getScoreboardManager().updateScoreboard(worldName);
+                }
+
+                player.sendMessage(ChatColor.GREEN + "You caught a " + getTierColor(caughtFish.getTier()) + caughtFish.getName() +
+                        ChatColor.GREEN + " worth $" + String.format("%.2f", caughtFish.getValue()) + "!");
+            }
         }
     }
 

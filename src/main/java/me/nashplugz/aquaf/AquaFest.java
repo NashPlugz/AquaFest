@@ -5,10 +5,14 @@ import me.nashplugz.aquaf.commands.AquaSellCommand;
 import me.nashplugz.aquaf.events.FishingEventManager;
 import me.nashplugz.aquaf.listeners.FishingListener;
 import net.milkbowl.vault.economy.Economy;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class AquaFest extends JavaPlugin {
+public class AquaFest extends JavaPlugin implements Listener {
     private ConfigManager configManager;
     private FishingEventManager eventManager;
     private EventBossBarManager eventBossBarManager;
@@ -16,6 +20,7 @@ public class AquaFest extends JavaPlugin {
     private FishGenerator fishGenerator;
     private Economy economy;
     private ScoreboardManager scoreboardManager;
+    private FishingCooldownManager fishingCooldownManager;
 
     @Override
     public void onEnable() {
@@ -30,6 +35,12 @@ public class AquaFest extends JavaPlugin {
         fishGenerator = new FishGenerator(getConfig());
         scoreboardManager = new ScoreboardManager(this);
 
+        // Setup fishing cooldown manager
+        double exhaustionRadius = getConfig().getDouble("fish_exhaustion_radius", 5.0);
+        long cooldownTime = parseDuration(getConfig().getString("fish_exhaustion_cooldown", "5m"));
+        long messageCooldown = 10000; // 10 seconds in milliseconds
+        fishingCooldownManager = new FishingCooldownManager(exhaustionRadius, cooldownTime, messageCooldown);
+
         // Setup economy
         if (!setupEconomy()) {
             getLogger().severe("Disabled due to no Vault dependency found!");
@@ -43,6 +54,7 @@ public class AquaFest extends JavaPlugin {
 
         // Register listeners
         getServer().getPluginManager().registerEvents(new FishingListener(this), this);
+        getServer().getPluginManager().registerEvents(this, this);
 
         getLogger().info("AquaFest has been enabled!");
     }
@@ -63,6 +75,36 @@ public class AquaFest extends JavaPlugin {
         }
         economy = rsp.getProvider();
         return economy != null;
+    }
+
+    @EventHandler
+    public void onPlayerChangeWorld(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+        eventBossBarManager.updatePlayerBossBar(player);
+        if (eventManager.isEventActive(player.getWorld())) {
+            scoreboardManager.updateScoreboard(player.getWorld().getName());
+        } else if (eventManager.isWorldwideEventActive()) {
+            scoreboardManager.updateGlobalScoreboard();
+        } else {
+            scoreboardManager.removePlayerScoreboard(player);
+        }
+    }
+
+    private long parseDuration(String duration) {
+        long multiplier = 1000; // Default to milliseconds
+        if (duration.endsWith("s")) {
+            multiplier = 1000;
+            duration = duration.substring(0, duration.length() - 1);
+        } else if (duration.endsWith("m")) {
+            multiplier = 60000;
+            duration = duration.substring(0, duration.length() - 1);
+        }
+        try {
+            return Long.parseLong(duration) * multiplier;
+        } catch (NumberFormatException e) {
+            getLogger().warning("Invalid duration format: " + duration + ". Using default of 5 minutes.");
+            return 300000; // 5 minutes in milliseconds
+        }
     }
 
     public ConfigManager getConfigManager() {
@@ -91,5 +133,9 @@ public class AquaFest extends JavaPlugin {
 
     public ScoreboardManager getScoreboardManager() {
         return scoreboardManager;
+    }
+
+    public FishingCooldownManager getFishingCooldownManager() {
+        return fishingCooldownManager;
     }
 }

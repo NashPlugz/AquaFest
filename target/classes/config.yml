@@ -1,3 +1,27 @@
+# Fish exhaustion settings
+fish_exhaustion_radius: 5.0
+fish_exhaustion_cooldown: 5m  # Use 's' for seconds or 'm' for minutes
+
+# Default config options
+fish_shortage_time: 300
+fish_shortage_distance: 10.0
+
+# Default world event
+events:
+  default:
+    name: "DefaultEvent"
+    duration: 3600
+    fish_shortage_time: 300
+    fish_shortage_distance: 10
+
+  # Worldwide event
+  worldwide:
+    name: "WorldwideEvent"
+    duration: 7200
+    fish_shortage_time: 600
+    fish_shortage_distance: 20
+
+# Fish types and their properties
 fish:
   cod:
     min_value: 5.0
@@ -15,3 +39,5 @@ fish:
     min_value: 20.0
     max_value: 30.0
     material: PUFFERFISH
+
+# Add any other configuration options here

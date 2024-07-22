@@ -29,7 +29,7 @@ public class EventBossBarManager {
         worldBossBars.put(worldName, bossBar);
         updateBossBar(worldName, duration);
 
-        // Show BossBar to all players in the world
+        // Show BossBar only to players in the specific world
         World world = Bukkit.getWorld(worldName);
         if (world != null) {
             for (Player player : world.getPlayers()) {
@@ -69,23 +69,23 @@ public class EventBossBarManager {
         }
     }
 
-    public void showBossBar(Player player) {
-        if (worldwideBossBar != null) {
-            worldwideBossBar.addPlayer(player);
-        } else {
-            BossBar worldBossBar = worldBossBars.get(player.getWorld().getName());
-            if (worldBossBar != null) {
-                worldBossBar.addPlayer(player);
-            }
-        }
-    }
+    public void updatePlayerBossBar(Player player) {
+        String worldName = player.getWorld().getName();
+        BossBar worldBossBar = worldBossBars.get(worldName);
 
-    public void hideBossBar(Player player) {
+        // Remove player from all boss bars
+        for (BossBar bossBar : worldBossBars.values()) {
+            bossBar.removePlayer(player);
+        }
         if (worldwideBossBar != null) {
             worldwideBossBar.removePlayer(player);
         }
-        for (BossBar bossBar : worldBossBars.values()) {
-            bossBar.removePlayer(player);
+
+        // Add player to the correct boss bar
+        if (worldBossBar != null) {
+            worldBossBar.addPlayer(player);
+        } else if (worldwideBossBar != null) {
+            worldwideBossBar.addPlayer(player);
         }
     }
 

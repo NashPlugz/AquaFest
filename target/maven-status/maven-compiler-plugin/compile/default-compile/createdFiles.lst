@@ -4,14 +4,12 @@ me\nashplugz\aquaf\EventConfig.class
 me\nashplugz\aquaf\Fish.class
 me\nashplugz\aquaf\ConfigManager.class
 me\nashplugz\aquaf\Fish$Tier.class
+me\nashplugz\aquaf\FishingCooldownManager.class
 me\nashplugz\aquaf\FishGenerator.class
 me\nashplugz\aquaf\LeaderboardManager.class
 me\nashplugz\aquaf\AquaFest.class
-me\nashplugz\aquaf\events\FishingEventManager$PlayerEventData.class
 me\nashplugz\aquaf\events\FishingEventManager.class
-me\nashplugz\aquaf\events\FishingEventManager$1.class
 me\nashplugz\aquaf\ScoreboardManager.class
 me\nashplugz\aquaf\EventBossBarManager.class
-me\nashplugz\aquaf\events\FishingEventManager$ActiveEvent.class
 me\nashplugz\aquaf\commands\AquaFestCommand.class
 me\nashplugz\aquaf\listeners\FishingListener$1.class
